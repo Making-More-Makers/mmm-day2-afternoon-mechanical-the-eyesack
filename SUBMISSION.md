@@ -114,12 +114,12 @@ Explain your design inspiration and choices:
 
 ## 4. Technical Checklist | 技术检查清单
 
-- [ ] All lines are vector paths (所有线条都是矢量路径)
-- [ ] Line width is 0.01–0.05 mm (线宽为 0.01–0.05 毫米)
-- [ ] All shapes are closed (所有形状都已闭合)
-- [ ] Minimum details > 1 mm (最小细节 > 1 毫米)
-- [ ] Text converted to paths (文本已转换为路径)
-- [ ] File exported as DXF (文件导出为 DXF)
+- [x] All lines are vector paths (所有线条都是矢量路径)
+- [x] Line width is 0.01–0.05 mm (线宽为 0.01–0.05 毫米)
+- [x] All shapes are closed (所有形状都已闭合)
+- [x] Minimum details > 1 mm (最小细节 > 1 毫米)
+- [x] Text converted to paths (文本已转换为路径)
+- [x] File exported as DXF (文件导出为 DXF)
 
 ## 5. Files Included | 文件说明
 
