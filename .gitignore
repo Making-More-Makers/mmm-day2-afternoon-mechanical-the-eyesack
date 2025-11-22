@@ -1,0 +1,87 @@
+# .gitignore for Mechanical Design Assignment
+# 机械设计作业的 .gitignore
+
+# Design Software Temporary Files
+# 设计软件临时文件
+
+# Adobe Illustrator
+*.ai~
+*.ai.bak
+.DS_Store
+
+# Inkscape
+*~
+*.autosave
+*.bak
+
+# Tinkercad (local exports/temp)
+*.backup
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*.log
+
+# Large binary files that might accidentally get added
+# 可能意外添加的大型二进制文件
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# Do NOT ignore these important files:
+# 不要忽略这些重要文件：
+!*.ai
+!*.svg
+!*.dxf
+!*.stl
+!*.jpg
+!*.jpeg
+!*.png
+!*.heic
+!*.webp
+!*.md
+!*.json
+!*.txt
+
+# Ignore OS-specific and editor files
+# 忽略操作系统特定和编辑器文件
+.vscode/
+.idea/
+*.sublime-*
+
+# Node modules (if any)
+node_modules/
+
+# Python cache (if any)
+__pycache__/
+*.pyc
+*.pyo
+
+# Large image backups
+*_backup.*
+*_old.*
+*_temp.*
+
+

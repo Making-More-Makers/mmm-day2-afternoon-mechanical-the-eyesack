@@ -1,0 +1,427 @@
+# GitHub Classroom File Validation for Day 2 Afternoon Assignment
+# Day 2 下午作业的 GitHub Classroom 文件验证
+
+name: File Validation for Mechanical Assignment
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  file-validation:
+    name: Validate Submission Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout student repository
+        uses: actions/checkout@v4
+      
+      - name: Validate submission structure
+        id: validate
+        run: |
+          echo "🔍 Checking submission files..."
+          echo "================================"
+          
+          # Initialize counters
+          ERRORS=0
+          WARNINGS=0
+          
+          # Function to report error
+          error() {
+            echo "❌ ERROR: $1"
+            ERRORS=$((ERRORS + 1))
+          }
+          
+          # Function to report warning
+          warning() {
+            echo "⚠️ WARNING: $1"
+            WARNINGS=$((WARNINGS + 1))
+          }
+          
+          # Function to report success
+          success() {
+            echo "✅ $1"
+          }
+          
+          # Check submission.json
+          echo ""
+          echo "📄 Checking submission.json..."
+          if [ ! -f "submission.json" ]; then
+            error "submission.json not found"
+          else
+            success "submission.json exists"
+            
+            # Check if it's valid JSON
+            if ! python3 -c "import json; json.load(open('submission.json'))" 2>/dev/null; then
+              error "submission.json is not valid JSON"
+            else
+              success "submission.json is valid JSON"
+              
+              # Check required fields
+              STUDENT_NAME=$(python3 -c "import json; print(json.load(open('submission.json')).get('student_name', ''))" 2>/dev/null)
+              if [ -z "$STUDENT_NAME" ] || [ "$STUDENT_NAME" = "Your Name" ] || [ "$STUDENT_NAME" = "" ]; then
+                warning "student_name is not filled in submission.json"
+              else
+                success "student_name filled: $STUDENT_NAME"
+              fi
+            fi
+          fi
+          
+          # Check A_LaserCut folder
+          echo ""
+          echo "📁 Checking A_LaserCut/ folder..."
+          if [ ! -d "A_LaserCut" ]; then
+            error "A_LaserCut/ folder not found"
+          else
+            success "A_LaserCut/ folder exists"
+            
+            # Check for design source files (.ai or .svg)
+            SOURCE_FILES=$(find A_LaserCut -maxdepth 1 -type f \( -iname "*.ai" -o -iname "*.svg" \) | wc -l)
+            if [ "$SOURCE_FILES" -eq 0 ]; then
+              error "No design source file (.ai or .svg) found in A_LaserCut/"
+            elif [ "$SOURCE_FILES" -gt 1 ]; then
+              warning "Multiple source files found (expected 1): $SOURCE_FILES files"
+              find A_LaserCut -maxdepth 1 -type f \( -iname "*.ai" -o -iname "*.svg" \)
+            else
+              success "Design source file found: $(find A_LaserCut -maxdepth 1 -type f \( -iname "*.ai" -o -iname "*.svg" \))"
+            fi
+            
+            # Check for DXF export file
+            DXF_FILES=$(find A_LaserCut -maxdepth 1 -type f -iname "*.dxf" | wc -l)
+            if [ "$DXF_FILES" -eq 0 ]; then
+              error "No DXF export file found in A_LaserCut/"
+            elif [ "$DXF_FILES" -gt 1 ]; then
+              warning "Multiple DXF files found (expected 1): $DXF_FILES files"
+            else
+              DXF_FILE=$(find A_LaserCut -maxdepth 1 -type f -iname "*.dxf")
+              success "DXF export file found: $(basename "$DXF_FILE")"
+              
+              # Check DXF file size
+              DXF_SIZE=$(stat -f%z "$DXF_FILE" 2>/dev/null || stat -c%s "$DXF_FILE" 2>/dev/null)
+              DXF_SIZE_KB=$((DXF_SIZE / 1024))
+              if [ "$DXF_SIZE" -lt 100 ]; then
+                warning "DXF file is very small (${DXF_SIZE} bytes) - might be empty"
+              else
+                success "DXF file size: ${DXF_SIZE_KB} KB"
+              fi
+            fi
+            
+            # Check for README_LaserCut.md
+            if [ ! -f "A_LaserCut/README_LaserCut.md" ]; then
+              error "README_LaserCut.md not found in A_LaserCut/"
+            else
+              success "README_LaserCut.md exists"
+              
+              # Check README size
+              README_SIZE=$(stat -f%z "A_LaserCut/README_LaserCut.md" 2>/dev/null || stat -c%s "A_LaserCut/README_LaserCut.md" 2>/dev/null)
+              if [ "$README_SIZE" -lt 200 ]; then
+                warning "README_LaserCut.md is very short (${README_SIZE} bytes)"
+              else
+                success "README_LaserCut.md size: ${README_SIZE} bytes"
+              fi
+            fi
+            
+            # Check for photos
+            PHOTO_COUNT=$(find A_LaserCut -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.heic" -o -iname "*.webp" \) | wc -l)
+            if [ "$PHOTO_COUNT" -eq 0 ]; then
+              error "No photos found in A_LaserCut/ (required: at least 2)"
+            elif [ "$PHOTO_COUNT" -eq 1 ]; then
+              warning "Only 1 photo found in A_LaserCut/ (recommended: at least 2)"
+            else
+              success "$PHOTO_COUNT photos found in A_LaserCut/"
+            fi
+          fi
+          
+          # Check B_3DModel folder
+          echo ""
+          echo "📁 Checking B_3DModel/ folder..."
+          if [ ! -d "B_3DModel" ]; then
+            error "B_3DModel/ folder not found"
+          else
+            success "B_3DModel/ folder exists"
+            
+            # Check for STL file
+            STL_FILES=$(find B_3DModel -maxdepth 1 -type f -iname "*.stl" | wc -l)
+            if [ "$STL_FILES" -eq 0 ]; then
+              error "No STL file found in B_3DModel/"
+            elif [ "$STL_FILES" -gt 1 ]; then
+              warning "Multiple STL files found (expected 1): $STL_FILES files"
+            else
+              STL_FILE=$(find B_3DModel -maxdepth 1 -type f -iname "*.stl")
+              success "STL file found: $(basename "$STL_FILE")"
+              
+              # Check STL file size
+              STL_SIZE=$(stat -f%z "$STL_FILE" 2>/dev/null || stat -c%s "$STL_FILE" 2>/dev/null)
+              STL_SIZE_KB=$((STL_SIZE / 1024))
+              if [ "$STL_SIZE" -lt 1000 ]; then
+                warning "STL file is very small (${STL_SIZE} bytes) - might be empty or too simple"
+              elif [ "$STL_SIZE" -gt 10485760 ]; then
+                warning "STL file is very large (${STL_SIZE_KB} KB) - might be too complex"
+              else
+                success "STL file size: ${STL_SIZE_KB} KB"
+              fi
+            fi
+            
+            # Check for README_3DPrint.md
+            if [ ! -f "B_3DModel/README_3DPrint.md" ]; then
+              error "README_3DPrint.md not found in B_3DModel/"
+            else
+              success "README_3DPrint.md exists"
+              
+              # Check README size
+              README_SIZE=$(stat -f%z "B_3DModel/README_3DPrint.md" 2>/dev/null || stat -c%s "B_3DModel/README_3DPrint.md" 2>/dev/null)
+              if [ "$README_SIZE" -lt 200 ]; then
+                warning "README_3DPrint.md is very short (${README_SIZE} bytes)"
+              else
+                success "README_3DPrint.md size: ${README_SIZE} bytes"
+              fi
+            fi
+            
+            # Check for photos
+            PHOTO_COUNT=$(find B_3DModel -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.heic" -o -iname "*.webp" \) | wc -l)
+            if [ "$PHOTO_COUNT" -eq 0 ]; then
+              error "No photos/screenshots found in B_3DModel/ (required: at least 2)"
+            elif [ "$PHOTO_COUNT" -eq 1 ]; then
+              warning "Only 1 photo found in B_3DModel/ (recommended: at least 2)"
+            else
+              success "$PHOTO_COUNT photos/screenshots found in B_3DModel/"
+            fi
+            
+            # Check for optional Tinkercad link
+            if [ -f "B_3DModel/tinkercad_link.txt" ]; then
+              success "tinkercad_link.txt found (optional, bonus!)"
+            fi
+          fi
+          
+          # Summary
+          echo ""
+          echo "================================"
+          echo "📊 VALIDATION SUMMARY"
+          echo "================================"
+          echo "Errors: $ERRORS"
+          echo "Warnings: $WARNINGS"
+          
+          # Save results for next step
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+          echo "warnings=$WARNINGS" >> $GITHUB_OUTPUT
+          
+          # Exit with error if there are critical errors
+          if [ "$ERRORS" -gt 0 ]; then
+            echo ""
+            echo "❌ Validation failed with $ERRORS error(s)"
+            echo "Please fix the errors above and push again."
+            exit 1
+          else
+            echo ""
+            echo "✅ All required files found!"
+            if [ "$WARNINGS" -gt 0 ]; then
+              echo "⚠️ But there are $WARNINGS warning(s) to review"
+            fi
+          fi
+      
+      - name: Create feedback issue
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          ERRORS: ${{ steps.validate.outputs.errors }}
+          WARNINGS: ${{ steps.validate.outputs.warnings }}
+        with:
+          script: |
+            const fs = require('fs');
+            const errors = process.env.ERRORS || '0';
+            const warnings = process.env.WARNINGS || '0';
+            
+            let status = '';
+            let emoji = '';
+            let summary = '';
+            
+            if (errors === '0') {
+              status = '✅ Validation Passed';
+              emoji = '✅';
+              summary = 'All required files are present! Great work organizing your submission.';
+            } else {
+              status = '❌ Validation Failed';
+              emoji = '❌';
+              summary = `Found ${errors} error(s) that need to be fixed before your submission is complete.`;
+            }
+            
+            const feedback = `# ${emoji} File Validation Results | 文件验证结果
+            
+            > **Assignment**: Day 2 Afternoon - Laser Cutting + 3D Printing  
+            > **作业**: 第2天下午 - 激光切割 + 3D 打印  
+            > **Validation Date**: ${new Date().toISOString().split('T')[0]}  
+            > **验证日期**: ${new Date().toISOString().split('T')[0]}
+            
+            ---
+            
+            ## 📊 Status | 状态
+            
+            **${status}**
+            
+            ${summary}
+            
+            ${summary}
+            
+            **Errors | 错误**: ${errors}  
+            **Warnings | 警告**: ${warnings}
+            
+            ---
+            
+            ## 📋 Detailed Results | 详细结果
+            
+            Check the Actions tab for full validation log:
+            
+            查看 Actions 标签以获取完整验证日志：
+            
+            👉 [View full validation log](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            
+            ---
+            
+            ## 📁 Required Files Checklist | 必需文件检查清单
+            
+            ### Task A: Laser Cutting | 任务 A：激光切割
+            
+            - \`submission.json\` - Submission info (提交信息)
+            - \`A_LaserCut/\` folder (文件夹)
+              - Design source: \`.ai\` OR \`.svg\` file (设计源文件)
+              - Export: \`.dxf\` file (导出文件)
+              - \`README_LaserCut.md\` - Documentation (文档)
+              - Photos: At least 2 images (照片：至少 2 张图片)
+            
+            ### Task B: 3D Printing | 任务 B：3D 打印
+            
+            - \`B_3DModel/\` folder (文件夹)
+              - Model: \`.stl\` file (模型文件)
+              - \`README_3DPrint.md\` - Documentation (文档)
+              - Photos: At least 2 screenshots (照片：至少 2 张截图)
+              - \`tinkercad_link.txt\` - Optional (可选)
+            
+            ---
+            
+            ## 🔧 Common Issues | 常见问题
+            
+            ${errors !== '0' ? `
+            ### If files are missing | 如果文件缺失:
+            
+            1. **Check folder names** - Must be exactly \`A_LaserCut\` and \`B_3DModel\` (检查文件夹名称)
+            2. **Check file extensions** - \`.dxf\` for laser cutting, \`.stl\` for 3D printing (检查文件扩展名)
+            3. **Check README files** - Must be named exactly \`README_LaserCut.md\` and \`README_3DPrint.md\` (检查 README 文件名)
+            4. **Check photo formats** - Supported: .jpg, .jpeg, .png, .heic, .webp (检查照片格式)
+            5. **Git add and commit** - Make sure you added all files to Git (确保添加所有文件到 Git)
+            
+            \`\`\`bash
+            # Example: Add all files and push
+            git add A_LaserCut/ B_3DModel/ submission.json
+            git commit -m "Add all required files"
+            git push origin main
+            \`\`\`
+            ` : ''}
+            
+            ${warnings !== '0' ? `
+            ### Warnings to review | 需要检查的警告:
+            
+            - Check the Actions log for specific warnings (查看 Actions 日志了解具体警告)
+            - Warnings won't prevent submission but may affect grading (警告不会阻止提交但可能影响评分)
+            - Consider fixing warnings for a better submission (考虑修复警告以获得更好的提交)
+            ` : ''}
+            
+            ---
+            
+            ## 📚 Resources | 资源
+            
+            - [README.md](./README.md) - Full assignment instructions (完整作业说明)
+            - [DESIGN-GUIDE.md](./DESIGN-GUIDE.md) - Design tutorials and rules (设计教程和规则)
+            - [SUBMISSION.md](./SUBMISSION.md) - Submission requirements (提交要求)
+            - [HOW-TO-SUBMIT.md](./HOW-TO-SUBMIT.md) - Step-by-step guide (分步指南)
+            - [rubric.md](./rubric.md) - Grading criteria (评分标准)
+            
+            ---
+            
+            ## 💬 Need Help? | 需要帮助？
+            
+            ${errors !== '0' ? `
+            **Your submission has errors that need to be fixed.**
+            
+            **你的提交有需要修复的错误。**
+            
+            1. Read the error messages in the Actions log (阅读 Actions 日志中的错误消息)
+            2. Fix the issues (修复问题)
+            3. Commit and push again (再次提交并推送)
+            4. The validation will run automatically (验证将自动运行)
+            
+            If you're stuck:
+            - Check [HOW-TO-SUBMIT.md](./HOW-TO-SUBMIT.md) for detailed instructions (查看详细说明)
+            - Ask your instructor or TAs for help (向讲师或助教寻求帮助)
+            - Review the submission structure in README.md (查看 README.md 中的提交结构)
+            ` : `
+            **Great job! Your files are properly organized.**
+            
+            **干得好！你的文件组织得很好。**
+            
+            ${warnings !== '0' ? `
+            Review the warnings to make your submission even better:
+            - Some files might be incomplete (某些文件可能不完整)
+            - Consider adding more documentation or photos (考虑添加更多文档或照片)
+            ` : ''}
+            
+            Your instructor will review the content quality for final grading.
+            
+            讲师将审查内容质量以进行最终评分。
+            `}
+            
+            ---
+            
+            ## 🔄 Resubmission | 重新提交
+            
+            This validation runs automatically on every push. If you need to make changes:
+            
+            此验证在每次推送时自动运行。如果需要进行更改：
+            
+            1. Make your changes locally (在本地进行更改)
+            2. Commit: \`git commit -am "Fix submission issues"\` (提交)
+            3. Push: \`git push origin main\` (推送)
+            4. Wait for automatic validation (等待自动验证)
+            
+            ---
+            
+            *This is automated file validation. Your instructor will manually review design quality and creativity.*
+            
+            *这是自动文件验证。讲师将手动审查设计质量和创意。*
+            `;
+            
+            // Check if feedback issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['file-validation', 'feedback']
+            });
+            
+            if (issues.data.length > 0) {
+              // Update existing issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: feedback
+              });
+              console.log(`✅ Updated feedback issue #${issues.data[0].number}`);
+            } else {
+              // Create new issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `${emoji} File Validation Feedback | 文件验证反馈`,
+                body: feedback,
+                labels: ['file-validation', 'feedback']
+              });
+              console.log(`✅ Created feedback issue #${issue.data.number}`);
+            }
+
+
